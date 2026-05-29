@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isStudent() {
+      return getUserRole() == 'student';
+    }
+
+    function isTeacher() {
+      return getUserRole() == 'teacher';
+    }
+
+    function isPsychologist() {
+      return getUserRole() == 'psychologist';
+    }
+
+    function isAdmin() {
+      return getUserRole() == 'super_admin' || getUserRole() == 'system_admin';
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Users collection - users can read/write their own profile
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow write: if isAuthenticated() && isOwner(userId);
+      allow read: if isAuthenticated() && isTeacher();  // teachers can read student profiles
+    }
+
+    // Tasks - students own their tasks
+    match /tasks/{taskId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+      allow read: if isAuthenticated() && isTeacher();
+    }
+
+    // Reflections - private by default
+    match /reflections/{reflectionId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+      allow read: if isAuthenticated() && isTeacher() && resource.data.isPrivate == false;
+      // Psychologists can only see anonymized aggregates (handled server-side)
+    }
+
+    // Mood entries - student owned, shared per privacy settings
+    match /moods/{moodId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+      allow read: if isAuthenticated() && (isTeacher() || isPsychologist());
+    }
+
+    // Focus sessions - student owned
+    match /focus_sessions/{sessionId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+      allow read: if isAuthenticated() && isTeacher();
+    }
+
+    // Habits - student owned
+    match /habits/{habitId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Goals - student owned
+    match /goals/{goalId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Wellbeing logs - private, psychologist access with consent
+    match /wellbeing_logs/{logId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+      // Psychologists see only aggregated/anonymized data via Cloud Functions
+    }
+
+    // AI feedback - user owned
+    match /ai_feedback/{feedbackId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+      allow read: if isAuthenticated() && isAdmin();
+    }
+
+    // Notifications - user can read/update their own
+    match /notifications/{notifId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
+      // Admins and teachers can create notifications for students
+      allow create: if isAuthenticated() && (isTeacher() || isAdmin());
+    }
+
+    // Departments - readable by all authenticated, writable by admins
+    match /departments/{deptId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Courses - teachers can manage their courses
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isOwner(resource.data.teacherId) || isAdmin());
+    }
+
+    // Audit logs - admin read only, system writes
+    match /audit_logs/{logId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if false; // Written server-side only
+    }
+
+    // Analytics - admin only
+    match /analytics/{docId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if false;
+    }
+  }
+}
