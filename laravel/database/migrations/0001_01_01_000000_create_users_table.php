@@ -17,7 +17,7 @@ return new class extends Migration
             $table->rememberToken();
             // KKU SSO fields
             $table->enum('role', ['student', 'teacher', 'psychologist', 'super_admin', 'system_admin'])->default('student');
-            $table->enum('auth_provider', ['microsoft', 'google', 'local'])->default('local');
+            $table->enum('auth_provider', ['kku_sso', 'google', 'local'])->default('local');
             $table->string('provider_id')->nullable()->index();
             $table->string('avatar_url')->nullable();
             $table->string('student_id', 20)->nullable()->unique();

@@ -5,36 +5,124 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
+    // ── KKU OIDC (ssonext.kku.ac.th) ─────────────────────────────
+
     /**
-     * Redirect to Microsoft Azure AD (KKU SSO)
-     * - Students login with @kkumail.com
-     * - Staff login with @kku.ac.th
+     * Fetch & cache the OIDC discovery document.
+     * The discovery document contains all endpoint URLs (authorization,
+     * token, userinfo, end_session) so we never hardcode them.
      */
-    public function redirectToMicrosoft()
+    private function oidcDiscovery(): array
     {
-        return Socialite::driver('azure')
-            ->scopes(['email', 'profile', 'openid'])
-            ->redirect();
+        return Cache::remember('oidc_discovery', 3600, function () {
+            $issuer = rtrim(config('services.oidc.issuer'), '/');
+            $response = Http::timeout(10)->get("{$issuer}/.well-known/openid-configuration");
+            abort_unless($response->successful(), 503, 'KKU SSO discovery failed');
+            return $response->json();
+        });
     }
 
-    public function handleMicrosoftCallback()
+    /**
+     * Step 1 — redirect user to KKU SSO authorization endpoint.
+     * Generates state + nonce stored in session to prevent CSRF.
+     */
+    public function redirectToKku()
     {
+        $discovery = $this->oidcDiscovery();
+        $state     = bin2hex(random_bytes(16));
+        $nonce     = bin2hex(random_bytes(16));
+
+        session(['oidc_state' => $state, 'oidc_nonce' => $nonce]);
+
+        $params = http_build_query([
+            'response_type' => 'code',
+            'client_id'     => config('services.oidc.client_id'),
+            'redirect_uri'  => config('services.oidc.redirect'),
+            'scope'         => 'openid email profile',
+            'state'         => $state,
+            'nonce'         => $nonce,
+        ]);
+
+        return redirect($discovery['authorization_endpoint'] . '?' . $params);
+    }
+
+    /**
+     * Step 2 — KKU SSO redirects back here with ?code=...&state=...
+     * Registered Redirect URI: {APP_URL}/auth/callback/login
+     */
+    public function handleKkuCallback(Request $request)
+    {
+        if ($request->has('error')) {
+            return redirect('/login')->withErrors([
+                'sso' => $request->get('error_description', 'KKU SSO ล้มเหลว'),
+            ]);
+        }
+
+        if ($request->get('state') !== session('oidc_state')) {
+            return redirect('/login')->withErrors(['sso' => 'State ไม่ตรงกัน — กรุณาลองใหม่']);
+        }
+
         try {
-            $socialUser = Socialite::driver('azure')->user();
-            return $this->loginOrRegister($socialUser, 'microsoft');
+            $discovery = $this->oidcDiscovery();
+
+            // Exchange authorization code for tokens
+            $tokenResponse = Http::asForm()
+                ->withBasicAuth(
+                    config('services.oidc.client_id'),
+                    config('services.oidc.client_secret')
+                )
+                ->post($discovery['token_endpoint'], [
+                    'grant_type'   => 'authorization_code',
+                    'code'         => $request->get('code'),
+                    'redirect_uri' => config('services.oidc.redirect'),
+                ])
+                ->json();
+
+            if (isset($tokenResponse['error'])) {
+                throw new \RuntimeException(
+                    $tokenResponse['error_description'] ?? $tokenResponse['error']
+                );
+            }
+
+            $accessToken = $tokenResponse['access_token'];
+            $idToken     = $tokenResponse['id_token'] ?? null;
+
+            // Fetch user claims from userinfo endpoint
+            $userInfo = Http::withToken($accessToken)
+                ->get($discovery['userinfo_endpoint'])
+                ->json();
+
+            // Store id_token so logout can send id_token_hint to KKU SSO
+            session(['oidc_id_token' => $idToken]);
+            session()->forget('oidc_state');
+            session()->forget('oidc_nonce');
+
+            return $this->loginOrRegister($userInfo, 'kku_sso');
         } catch (\Exception $e) {
-            return redirect('/login')->withErrors(['sso' => 'KKU SSO ล้มเหลว: ' . $e->getMessage()]);
+            Cache::forget('oidc_discovery'); // refresh on next attempt
+            return redirect('/login')->withErrors(['sso' => 'KKU SSO ล้มเหลว — กรุณาลองใหม่อีกครั้ง']);
         }
     }
 
     /**
-     * Google OAuth – for external teachers without @kku.ac.th
+     * Post-logout redirect — KKU SSO sends user back here after sign-out.
+     * Registered Post-logout Redirect URI: {APP_URL}/auth/callback/logout
      */
+    public function handleLogoutCallback()
+    {
+        return redirect('/login')->with('success', 'ออกจากระบบสำเร็จ');
+    }
+
+    // ── Google OAuth (external teachers without @kku.ac.th) ──────
+
     public function redirectToGoogle()
     {
         return Socialite::driver('google')
@@ -46,21 +134,30 @@ class SocialAuthController extends Controller
     {
         try {
             $socialUser = Socialite::driver('google')->user();
-            return $this->loginOrRegister($socialUser, 'google');
+            $userInfo   = [
+                'sub'   => $socialUser->getId(),
+                'email' => $socialUser->getEmail(),
+                'name'  => $socialUser->getName(),
+            ];
+            return $this->loginOrRegister($userInfo, 'google');
         } catch (\Exception $e) {
             return redirect('/login')->withErrors(['sso' => 'Google login ล้มเหลว']);
         }
     }
 
-    private function loginOrRegister($socialUser, string $provider)
-    {
-        $email  = strtolower($socialUser->getEmail());
-        $domain = strtolower(substr($email, strpos($email, '@') + 1));
+    // ── Shared ────────────────────────────────────────────────────
 
-        // Domain-based role assignment
+    private function loginOrRegister(array $userInfo, string $provider)
+    {
+        $email = strtolower($userInfo['email'] ?? '');
+
+        if (! $email) {
+            return redirect('/login')->withErrors(['sso' => 'ไม่พบอีเมลจาก SSO กรุณาติดต่อผู้ดูแลระบบ']);
+        }
+
         $role = User::determineRoleFromEmail($email);
 
-        // For Google logins, only allow teachers (not students)
+        // Students must use KKU SSO — block Google login for student domains
         if ($provider === 'google' && $role === 'student') {
             return redirect('/login')->withErrors([
                 'sso' => 'นักศึกษากรุณาล็อกอินด้วยบัญชี @kkumail.com ผ่าน KKU SSO',
@@ -70,12 +167,12 @@ class SocialAuthController extends Controller
         $user = User::firstOrCreate(
             ['email' => $email],
             [
-                'name'          => $socialUser->getName() ?? explode('@', $email)[0],
-                'role'          => $role,
-                'auth_provider' => $provider,
-                'provider_id'   => $socialUser->getId(),
-                'avatar_url'    => $socialUser->getAvatar(),
-                'is_active'     => true,
+                'name'             => $userInfo['name'] ?? explode('@', $email)[0],
+                'role'             => $role,
+                'auth_provider'    => $provider,
+                'provider_id'      => $userInfo['sub'] ?? null,
+                'is_active'        => true,
+                'email_verified_at' => now(),
                 'privacy_settings' => [
                     'reflections_visible' => false,
                     'analytics_shared'    => true,
@@ -86,12 +183,13 @@ class SocialAuthController extends Controller
         );
 
         if (! $user->is_active) {
-            return redirect('/login')->withErrors(['sso' => 'บัญชีของคุณถูกระงับ กรุณาติดต่อผู้ดูแลระบบ']);
+            return redirect('/login')->withErrors([
+                'sso' => 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
+            ]);
         }
 
         $user->update([
-            'provider_id' => $socialUser->getId(),
-            'avatar_url'  => $user->avatar_url ?? $socialUser->getAvatar(),
+            'provider_id'   => $userInfo['sub'] ?? $user->provider_id,
             'last_login_at' => now(),
         ]);
 

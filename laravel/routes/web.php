@@ -16,11 +16,12 @@ Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::post('/demo-login', [LoginController::class, 'demoLogin'])->name('demo.login');
 
-// KKU SSO – Microsoft Azure AD (@kkumail.com / @kku.ac.th)
-Route::get('/auth/microsoft', [SocialAuthController::class, 'redirectToMicrosoft'])->name('auth.microsoft');
-Route::get('/auth/microsoft/callback', [SocialAuthController::class, 'handleMicrosoftCallback']);
+// KKU SSO – OIDC (ssonext.kku.ac.th) — @kkumail.com / @kku.ac.th
+Route::get('/auth/kku', [SocialAuthController::class, 'redirectToKku'])->name('auth.kku');
+Route::get('/auth/callback/login', [SocialAuthController::class, 'handleKkuCallback'])->name('auth.callback.login');
+Route::get('/auth/callback/logout', [SocialAuthController::class, 'handleLogoutCallback'])->name('auth.callback.logout');
 
-// Google OAuth – external teachers (@gmail.com etc.)
+// Google OAuth – external teachers without @kku.ac.th
 Route::get('/auth/google', [SocialAuthController::class, 'redirectToGoogle'])->name('auth.google');
 Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
 

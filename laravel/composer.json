@@ -14,7 +14,6 @@
         "livewire/livewire": "^4.3",
         "openai-php/laravel": "^0.19.1",
         "socialiteproviders/google": "^4.1",
-        "socialiteproviders/microsoft-azure": "^5.2",
         "spatie/laravel-permission": "^8.0"
     },
     "require-dev": {

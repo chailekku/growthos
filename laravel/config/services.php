@@ -34,12 +34,15 @@ return [
             'channel'              => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'azure' => [
-        'client_id'     => env('MICROSOFT_CLIENT_ID'),
-        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
-        'redirect'      => env('MICROSOFT_REDIRECT_URI'),
-        'tenant'        => env('MICROSOFT_TENANT', 'common'),
+    // KKU Single Sign On (OIDC — ssonext.kku.ac.th)
+    'oidc' => [
+        'issuer'          => env('OIDC_ISSUER', 'https://ssonext.kku.ac.th'),
+        'client_id'       => env('OIDC_CLIENT_ID'),
+        'client_secret'   => env('OIDC_CLIENT_SECRET'),
+        'redirect'        => env('OIDC_REDIRECT_URI'),
+        'redirect_logout' => env('OIDC_REDIRECT_LOGOUT_URI'),
     ],
+    // Google OAuth — external teachers without @kku.ac.th
     'google' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
