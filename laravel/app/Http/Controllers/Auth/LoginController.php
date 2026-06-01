@@ -62,9 +62,23 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $provider = Auth::user()?->auth_provider;
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // For KKU SSO users: redirect to Microsoft global sign-out
+        // so the Azure AD session is also terminated (Single Logout)
+        if ($provider === 'microsoft') {
+            $postLogoutRedirect = urlencode(config('app.url') . '/login');
+            $tenant = config('services.azure.tenant', 'common');
+            return redirect(
+                "https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/logout"
+                . "?post_logout_redirect_uri={$postLogoutRedirect}"
+            );
+        }
+
         return redirect('/login');
     }
 
