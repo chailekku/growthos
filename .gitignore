@@ -34,3 +34,8 @@ nextjs/.env
 nextjs/.env.local
 nextjs/*.tsbuildinfo
 nextjs/next-env.d.ts
+
+# Next.js root-level leftovers (safe to ignore after restructure)
+/.next/
+/next-env.d.ts
+/*.tsbuildinfo
