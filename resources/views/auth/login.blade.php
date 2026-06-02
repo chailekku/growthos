@@ -24,15 +24,13 @@
                     <p class="text-sm text-gray-500 mb-5">
                         <span x-text="lang === 'th' ? 'สำหรับนักศึกษา (@kkumail.com) และบุคลากร (@kku.ac.th)' : 'For students (@kkumail.com) and staff (@kku.ac.th)'"></span>
                     </p>
-                    <a href="{{ route('auth.microsoft') }}"
+                    <a href="{{ route('auth.kku') }}"
                        class="flex items-center justify-center space-x-3 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors shadow-sm">
-                        <svg class="w-5 h-5" viewBox="0 0 21 21" fill="currentColor">
-                            <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-                            <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-                            <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-                            <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4l3 3"/>
                         </svg>
-                        <span x-text="lang === 'th' ? 'เข้าสู่ระบบด้วย Microsoft (KKU SSO)' : 'Login with Microsoft (KKU SSO)'"></span>
+                        <span x-text="lang === 'th' ? 'เข้าสู่ระบบด้วย KKU Single Sign On' : 'Login with KKU Single Sign On'"></span>
                     </a>
                 </div>
 

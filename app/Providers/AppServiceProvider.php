@@ -11,9 +11,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Register Google Socialite provider (for external teachers)
         $this->app['events']->listen(
             SocialiteWasCalled::class,
-            \SocialiteProviders\Microsoft\MicrosoftExtendSocialite::class.'@handle'
+            \SocialiteProviders\Google\GoogleExtendSocialite::class.'@handle'
         );
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
@@ -62,9 +63,28 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $provider = Auth::user()?->auth_provider;
+        $idToken  = session('oidc_id_token'); // grab before session is invalidated
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // For KKU SSO — redirect to OIDC end_session_endpoint so the
+        // KKU SSO session is terminated (Single Logout / RP-Initiated Logout)
+        if ($provider === 'kku_sso') {
+            $discovery  = Cache::get('oidc_discovery');
+            $endSession = $discovery['end_session_endpoint']
+                ?? rtrim(config('services.oidc.issuer'), '/') . '/openid-connect/logout';
+
+            $params = http_build_query(array_filter([
+                'id_token_hint'            => $idToken,
+                'post_logout_redirect_uri' => config('services.oidc.redirect_logout'),
+            ]));
+
+            return redirect("{$endSession}?{$params}");
+        }
+
         return redirect('/login');
     }
 
