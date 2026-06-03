@@ -14,19 +14,21 @@ class LoginController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect($this->roleRedirectPath(Auth::user()->role));
+            return redirect($this->roleRedirectUrl(Auth::user()->role));
         }
         return view('auth.login');
     }
 
     /**
      * Demo login — only active when DEMO_MODE=true
+     * รองรับทั้ง HTML form (redirect) และ AJAX/fetch (JSON)
      */
     public function demoLogin(Request $request)
     {
-        abort_unless(config('app.demo_mode', false), 403, 'Demo mode disabled');
+        abort_unless(config('app.demo_mode', false), 403, 'Demo mode is disabled');
 
         $role = $request->input('role', 'student');
+
         $demoEmails = [
             'student'      => 'demo.student@kkumail.com',
             'teacher'      => 'demo.teacher@kku.ac.th',
@@ -34,18 +36,23 @@ class LoginController extends Controller
             'super_admin'  => 'demo.admin@kku.ac.th',
         ];
 
-        $email = $demoEmails[$role] ?? $demoEmails['student'];
+        // role ไม่ถูกต้อง → ใช้ student แทน
+        if (! array_key_exists($role, $demoEmails)) {
+            $role = 'student';
+        }
+
+        $email = $demoEmails[$role];
 
         $user = User::firstOrCreate(
             ['email' => $email],
             [
-                'name'             => 'Demo ' . ucfirst($role),
-                'role'             => $role,
-                'auth_provider'    => 'local',
-                'password'         => Hash::make('demo_password'),
-                'is_active'        => true,
+                'name'              => 'Demo ' . ucfirst(str_replace('_', ' ', $role)),
+                'role'              => $role,
+                'auth_provider'     => 'local',
+                'password'          => Hash::make('demo_password_' . $role),
+                'is_active'         => true,
                 'email_verified_at' => now(),
-                'privacy_settings' => [
+                'privacy_settings'  => [
                     'reflections_visible' => false,
                     'analytics_shared'    => true,
                     'wellbeing_shared'    => true,
@@ -54,24 +61,38 @@ class LoginController extends Controller
             ]
         );
 
+        // อัปเดต role ถ้า user มีอยู่แล้วแต่ role เปลี่ยน
+        if ($user->role !== $role) {
+            $user->update(['role' => $role]);
+        }
+
+        // Sync Spatie role — จำเป็นสำหรับ route middleware 'role:xxx'
+        $user->syncRoles([$role]);
+
         Auth::login($user, remember: true);
 
-        return response()->json([
-            'redirect' => $this->roleRedirectPath($role),
-        ]);
+        $redirectUrl = $this->roleRedirectUrl($role);
+
+        // AJAX / fetch → ส่ง JSON กลับ
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['redirect' => $redirectUrl]);
+        }
+
+        // HTML form → redirect ปกติ
+        return redirect($redirectUrl);
     }
 
     public function logout(Request $request)
     {
+        // ดึงข้อมูลก่อน invalidate session
         $provider = Auth::user()?->auth_provider;
-        $idToken  = session('oidc_id_token'); // grab before session is invalidated
+        $idToken  = session('oidc_id_token');
 
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // For KKU SSO — redirect to OIDC end_session_endpoint so the
-        // KKU SSO session is terminated (Single Logout / RP-Initiated Logout)
+        // KKU SSO Single Logout
         if ($provider === 'kku_sso') {
             $discovery  = Cache::get('oidc_discovery');
             $endSession = $discovery['end_session_endpoint']
@@ -85,17 +106,20 @@ class LoginController extends Controller
             return redirect("{$endSession}?{$params}");
         }
 
-        return redirect('/login');
+        // Google / local → กลับหน้า login
+        return redirect()->route('login');
     }
 
-    private function roleRedirectPath(string $role): string
+    /**
+     * ใช้ named routes เพื่อให้ถูกต้องแม้ app อยู่ใน subdirectory
+     */
+    private function roleRedirectUrl(string $role): string
     {
         return match ($role) {
-            'student'                     => '/student/dashboard',
-            'teacher'                     => '/teacher/dashboard',
-            'psychologist'                => '/psychologist/dashboard',
-            'super_admin', 'system_admin' => '/admin/dashboard',
-            default                       => '/student/dashboard',
+            'teacher'      => route('teacher.dashboard'),
+            'psychologist' => route('psychologist.dashboard'),
+            'super_admin'  => route('admin.dashboard'),
+            default        => route('student.dashboard'),
         };
     }
 }

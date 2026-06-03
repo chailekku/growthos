@@ -23,8 +23,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       demoLogin: (role: UserRole) => {
-        const userKey = role === "super_admin" || role === "system_admin" ? "super_admin" : role;
-        const user = DEMO_USERS[userKey];
+        const user = DEMO_USERS[role];
         if (user) {
           set({ user: { ...user, role }, isAuthenticated: true, isLoading: false });
         }

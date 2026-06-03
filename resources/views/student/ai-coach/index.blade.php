@@ -1,117 +1,192 @@
 <x-app-layout>
-    <x-slot:title>AI โค้ช</x-slot:title>
+<x-slot:title>AI Coach</x-slot:title>
 
-    <div x-data="aiCoach()" class="max-w-3xl mx-auto space-y-4 flex flex-col h-full">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                <span class="text-xl">🤖</span>
+<div x-data="aiCoach()" class="max-w-4xl mx-auto space-y-4">
+
+    {{-- ── Header ──────────────────────────────────────────────── --}}
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="h-11 w-11 rounded-xl flex items-center justify-center text-white shrink-0" style="background-color:#2D9375;">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
             </div>
             <div>
-                <h1 class="text-xl font-bold text-gray-900" x-text="lang === 'th' ? 'AI โค้ชส่วนตัว' : 'Personal AI Coach'"></h1>
-                <p class="text-xs text-gray-500" x-text="lang === 'th' ? 'คุยกับ AI เพื่อรับคำแนะนำและแรงบันดาลใจ' : 'Chat with AI for guidance and motivation'"></p>
+                <h1 class="text-xl font-bold text-gray-900">AI Growth Coach</h1>
+                <p class="text-xs text-gray-400 mt-0.5">A supportive companion for your growth journey</p>
             </div>
         </div>
+        <button @click="newSession()"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                style="background-color:#2D9375;">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            New Session
+        </button>
+    </div>
 
-        {{-- Coach Type Picker --}}
-        <div class="flex flex-wrap gap-2">
-            @foreach([
-                ['type' => 'productivity', 'icon' => '⚡', 'th' => 'ผลิตภาพ', 'en' => 'Productivity'],
-                ['type' => 'reflection', 'icon' => '🪞', 'th' => 'สะท้อนคิด', 'en' => 'Reflection'],
-                ['type' => 'focus', 'icon' => '🎯', 'th' => 'โฟกัส', 'en' => 'Focus'],
-                ['type' => 'wellbeing', 'icon' => '💚', 'th' => 'สุขภาพจิต', 'en' => 'Wellbeing'],
-            ] as $c)
-            <button @click="coachType = '{{ $c['type'] }}'"
-                    :class="coachType === '{{ $c['type'] }}' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'"
-                    class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors">
-                {{ $c['icon'] }} <span x-text="lang === 'th' ? '{{ $c['th'] }}' : '{{ $c['en'] }}'"></span>
-            </button>
-            @endforeach
-        </div>
+    {{-- ── Coach Type Tabs ──────────────────────────────────────── --}}
+    <div class="bg-white rounded-2xl border border-gray-100 p-1.5 flex flex-wrap gap-1" style="box-shadow:0 2px 8px rgba(0,0,0,.06)">
+        @foreach([
+            ['productivity', '⚡', 'Productivity Coach'],
+            ['reflection',   '📖', 'Reflection Coach'],
+            ['focus',        '🎯', 'Focus Coach'],
+            ['leadership',   '🌟', 'Self-Leadership Coach'],
+            ['growth',       '🌱', 'Growth Mindset Coach'],
+        ] as [$type, $icon, $label])
+        <button @click="setCoachType('{{ $type }}')"
+                :class="coachType === '{{ $type }}'
+                    ? 'text-white rounded-xl px-3 py-2 text-sm font-semibold flex-shrink-0'
+                    : 'text-gray-600 rounded-xl px-3 py-2 text-sm font-medium hover:bg-gray-50 flex-shrink-0'"
+                :style="coachType === '{{ $type }}' ? 'background-color:#2D9375;' : ''">
+            {{ $icon }} {{ $label }}
+        </button>
+        @endforeach
+    </div>
 
-        {{-- Chat Messages --}}
-        <div class="card flex-1 overflow-y-auto space-y-4 min-h-96 max-h-[500px]" id="chatBox">
+    {{-- ── Chat Area ────────────────────────────────────────────── --}}
+    <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden" style="box-shadow:0 2px 8px rgba(0,0,0,.06)">
+
+        {{-- Messages --}}
+        <div class="p-5 space-y-4 min-h-96 max-h-[480px] overflow-y-auto" id="chatBox">
             {{-- Welcome message --}}
-            <div class="flex items-start space-x-3">
-                <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">🤖</div>
-                <div class="bg-indigo-50 rounded-2xl rounded-tl-none px-4 py-3 max-w-lg">
-                    <p class="text-sm text-gray-800" x-text="lang === 'th' ? 'สวัสดีค่ะ! ฉันคือ AI โค้ชส่วนตัวของคุณ พร้อมช่วยเรื่องการเรียน การจัดการเวลา และสุขภาพจิตนะคะ 😊 มีอะไรที่อยากคุยไหมคะ?' : 'Hello! I\'m your personal AI coach, ready to help with studying, time management, and mental wellness 😊 What would you like to talk about?'"></p>
+            <div class="flex items-start gap-3">
+                <div class="h-8 w-8 rounded-full flex items-center justify-center text-white shrink-0 text-sm" style="background-color:#2D9375;">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                </div>
+                <div class="max-w-lg rounded-2xl rounded-tl-none px-4 py-3" style="background-color:#f0faf5; border: 1px solid #c3e6cb;">
+                    <p class="text-sm text-gray-800 leading-relaxed" x-text="welcomeMessages[coachType]"></p>
                 </div>
             </div>
 
+            {{-- Dynamic messages --}}
             <template x-for="msg in messages" :key="msg.id">
-                <div :class="msg.role === 'user' ? 'flex-row-reverse' : ''" class="flex items-start space-x-3">
-                    <div :class="msg.role === 'user' ? 'bg-indigo-600 text-white ml-3 rounded-br-none' : 'bg-indigo-50 text-gray-800 mr-3 rounded-bl-none'"
-                         class="rounded-2xl px-4 py-3 max-w-lg">
-                        <p class="text-sm" x-text="msg.content"></p>
+                <div :class="msg.role === 'user' ? 'flex-row-reverse' : ''" class="flex items-end gap-3">
+                    <template x-if="msg.role !== 'user'">
+                        <div class="h-8 w-8 rounded-full flex items-center justify-center text-white shrink-0" style="background-color:#2D9375;">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                        </div>
+                    </template>
+                    <div :class="msg.role === 'user'
+                            ? 'text-white rounded-2xl rounded-br-none px-4 py-3 max-w-sm ml-auto'
+                            : 'text-gray-800 rounded-2xl rounded-tl-none px-4 py-3 max-w-lg'"
+                         :style="msg.role === 'user'
+                            ? 'background-color:#2D9375;'
+                            : 'background-color:#f0faf5; border:1px solid #c3e6cb;'">
+                        <p class="text-sm leading-relaxed" x-text="msg.content"></p>
                     </div>
                 </div>
             </template>
 
-            <div x-show="loading" class="flex items-start space-x-3">
-                <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">🤖</div>
-                <div class="bg-indigo-50 rounded-2xl rounded-tl-none px-4 py-3">
-                    <div class="flex space-x-1">
-                        <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay:0ms"></div>
-                        <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay:150ms"></div>
-                        <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay:300ms"></div>
+            {{-- Loading indicator --}}
+            <div x-show="loading" class="flex items-end gap-3">
+                <div class="h-8 w-8 rounded-full flex items-center justify-center text-white shrink-0" style="background-color:#2D9375;">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                </div>
+                <div class="rounded-2xl rounded-tl-none px-4 py-3" style="background-color:#f0faf5; border:1px solid #c3e6cb;">
+                    <div class="flex gap-1.5 items-center h-5">
+                        <div class="w-2 h-2 rounded-full animate-bounce" style="background-color:#2D9375; animation-delay:0ms"></div>
+                        <div class="w-2 h-2 rounded-full animate-bounce" style="background-color:#2D9375; animation-delay:150ms"></div>
+                        <div class="w-2 h-2 rounded-full animate-bounce" style="background-color:#2D9375; animation-delay:300ms"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- Input --}}
-        <div class="card py-4">
-            <div class="flex space-x-3">
+        {{-- Quick Prompts --}}
+        <div class="px-5 pb-3">
+            <div class="flex flex-wrap gap-2">
+                @foreach([
+                    'Help me reflect on my day',
+                    "I'm feeling overwhelmed",
+                    'How can I find my focus?',
+                    'I want to build better habits',
+                    'Help me see a challenge differently',
+                ] as $prompt)
+                    <button @click="input = '{{ $prompt }}'; sendMessage()"
+                            class="text-xs px-3 py-1.5 rounded-full border font-medium hover:bg-teal-50 transition-colors"
+                            style="border-color:#c3e6cb; color:#2D9375;">
+                        {{ $prompt }}
+                    </button>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Input Bar --}}
+        <div class="p-4 border-t border-gray-100">
+            <div class="flex gap-3">
                 <input type="text" x-model="input"
-                       @keyup.enter="sendMessage"
-                       :placeholder="lang === 'th' ? 'พิมพ์ข้อความ...' : 'Type a message...'"
-                       class="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                <button @click="sendMessage" :disabled="loading || !input.trim()"
-                        class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span x-text="lang === 'th' ? 'ส่ง' : 'Send'"></span>
+                       @keyup.enter="sendMessage()"
+                       placeholder="Type your message..."
+                       class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:border-transparent outline-none"
+                       style="focus-ring-color:#2D9375;">
+                <button @click="sendMessage()"
+                        :disabled="loading || !input.trim()"
+                        class="h-10 w-10 rounded-full flex items-center justify-center text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                        style="background-color:#2D9375;">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
             </div>
-            <p class="text-xs text-gray-400 mt-2 text-center" x-text="lang === 'th' ? '⚠️ AI ไม่สามารถวินิจฉัยโรคได้ หากมีปัญหาด้านจิตใจ กรุณาติดต่อนักจิตวิทยาของมหาวิทยาลัย' : '⚠️ AI cannot diagnose. For mental health concerns, please contact university counselor'"></p>
         </div>
     </div>
 
-    <script>
-    function aiCoach() {
-        return {
-            lang: localStorage.getItem('lang') || 'th',
-            coachType: 'productivity',
-            messages: [],
-            input: '',
-            loading: false,
-            msgId: 0,
-            async sendMessage() {
-                if (!this.input.trim() || this.loading) return;
-                const userMsg = this.input.trim();
-                this.input = '';
-                this.messages.push({ id: ++this.msgId, role: 'user', content: userMsg });
-                this.loading = true;
-                this.$nextTick(() => {
-                    const box = document.getElementById('chatBox');
-                    if (box) box.scrollTop = box.scrollHeight;
+    {{-- ── Footer disclaimer ────────────────────────────────────── --}}
+    <p class="text-xs text-gray-400 text-center leading-relaxed">
+        This AI coach is a supportive companion, not a replacement for professional help. Trust by default, reflection by design.
+    </p>
+</div>
+
+<script>
+function aiCoach() {
+    return {
+        coachType: 'productivity',
+        messages: [],
+        input: '',
+        loading: false,
+        msgId: 0,
+        welcomeMessages: {
+            productivity: "Welcome. I'm here to explore productivity with you — not to push harder, but to help you work in ways that feel aligned and sustainable. What's on your mind today?",
+            reflection:   "Welcome to this reflective space. There's no judgment here — only curiosity. What experience or feeling from today would you like to sit with and explore?",
+            focus:        "Let's look at focus together. Sometimes what we call 'distraction' is actually telling us something important. What's been pulling your attention away recently?",
+            leadership:   "Self-leadership starts with self-understanding. Every step inward is a step toward becoming the person you want to be. What would you like to explore about yourself today?",
+            growth:       "Challenges are where growth hides. I'm here to help you find the learning in whatever you're going through. What has been stretching you lately?",
+        },
+        setCoachType(type) {
+            this.coachType = type;
+            this.messages = [];
+        },
+        newSession() {
+            this.messages = [];
+            this.input = '';
+        },
+        async sendMessage() {
+            if (!this.input.trim() || this.loading) return;
+            const userMsg = this.input.trim();
+            this.input = '';
+            this.messages.push({ id: ++this.msgId, role: 'user', content: userMsg });
+            this.loading = true;
+            this.$nextTick(() => {
+                const box = document.getElementById('chatBox');
+                if (box) box.scrollTop = box.scrollHeight;
+            });
+            try {
+                const res = await fetch('{{ route('student.ai-coach.chat') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                    },
+                    body: JSON.stringify({ message: userMsg, coach_type: this.coachType })
                 });
-                try {
-                    const res = await fetch('{{ route('student.ai-coach.chat') }}', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                        body: JSON.stringify({ message: userMsg, coach_type: this.coachType })
-                    });
-                    const data = await res.json();
-                    this.messages.push({ id: ++this.msgId, role: 'assistant', content: data.response });
-                } catch(e) {
-                    this.messages.push({ id: ++this.msgId, role: 'assistant', content: this.lang === 'th' ? 'ขออภัย เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' : 'Sorry, an error occurred. Please try again.' });
-                }
-                this.loading = false;
-                this.$nextTick(() => {
-                    const box = document.getElementById('chatBox');
-                    if (box) box.scrollTop = box.scrollHeight;
-                });
+                const data = await res.json();
+                this.messages.push({ id: ++this.msgId, role: 'assistant', content: data.response });
+            } catch(e) {
+                this.messages.push({ id: ++this.msgId, role: 'assistant', content: 'Something went wrong. Please try again.' });
             }
+            this.loading = false;
+            this.$nextTick(() => {
+                const box = document.getElementById('chatBox');
+                if (box) box.scrollTop = box.scrollHeight;
+            });
         }
     }
-    </script>
+}
+</script>
 </x-app-layout>

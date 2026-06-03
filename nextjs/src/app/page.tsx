@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -28,11 +28,10 @@ export default function LandingPage() {
   useEffect(() => {
     if (isAuthenticated && user) {
       const roleRoutes: Record<string, string> = {
-        student: "/student/dashboard",
-        teacher: "/teacher/dashboard",
+        student:      "/student/dashboard",
+        teacher:      "/teacher/dashboard",
         psychologist: "/psychologist/dashboard",
-        super_admin: "/admin/dashboard",
-        system_admin: "/admin/dashboard",
+        super_admin:  "/admin/dashboard",
       };
       router.replace(roleRoutes[user.role] || "/student/dashboard");
     }
@@ -47,7 +46,7 @@ export default function LandingPage() {
             <div className="h-8 w-8 rounded-xl bg-brand-600 flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
-            <span className="font-bold text-gray-900">Gekku GrowthOS</span>
+            <span className="font-bold text-gray-900">KKU GrowthOS</span>
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
@@ -165,8 +164,8 @@ export default function LandingPage() {
           </h2>
           <p className="text-white/80 mb-6">
             {language === "th"
-              ? "เข้าร่วมกับนักศึกษาหลายพันคนที่กำลังเติบโตด้วย Gekku GrowthOS"
-              : "Join thousands of students already growing with Gekku GrowthOS"
+              ? "เข้าร่วมกับนักศึกษาหลายพันคนที่กำลังเติบโตด้วย KKU GrowthOS"
+              : "Join thousands of students already growing with KKU GrowthOS"
             }
           </p>
           <Button size="xl" variant="outline" className="bg-white text-brand-700 hover:bg-gray-50 border-white" onClick={() => router.push("/login")}>
@@ -177,7 +176,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-gray-100 py-8 text-center text-sm text-gray-400">
-        <p>© 2025 Gekku GrowthOS · Khon Kaen University · {language === "th" ? "ออกแบบด้วยความห่วงใย" : "Designed with care"}</p>
+        <p>© 2025 KKU GrowthOS · Khon Kaen University · {language === "th" ? "ออกแบบด้วยความห่วงใย" : "Designed with care"}</p>
       </footer>
     </div>
   );

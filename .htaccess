@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /growthos/
+
+    # 1. Skip if request is for /growthos/public/ directly (prevent loops)
+    RewriteRule ^public/ - [L]
+
+    # 2. Serve Vite build assets directly from public/build/
+    RewriteRule ^(build/.+)$ public/$1 [L]
+
+    # 3. Serve other known static files from public/
+    RewriteRule ^(favicon\.ico|robots\.txt|storage/.+)$ public/$1 [L]
+
+    # 4. Route all other requests to index.php (the Laravel bridge)
+    RewriteRule ^ index.php [L]
+</IfModule>

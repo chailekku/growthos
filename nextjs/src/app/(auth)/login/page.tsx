@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -20,11 +20,10 @@ const DEMO_ROLES: { role: UserRole; labelKey: "student" | "teacher" | "psycholog
 ];
 
 const ROLE_ROUTES: Record<string, string> = {
-  student: "/student/dashboard",
-  teacher: "/teacher/dashboard",
+  student:      "/student/dashboard",
+  teacher:      "/teacher/dashboard",
   psychologist: "/psychologist/dashboard",
-  super_admin: "/admin/dashboard",
-  system_admin: "/admin/dashboard",
+  super_admin:  "/admin/dashboard",
 };
 
 export default function LoginPage() {
@@ -74,7 +73,7 @@ export default function LoginPage() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="font-bold text-lg">Gekku GrowthOS</p>
+              <p className="font-bold text-lg">KKU GrowthOS</p>
               <p className="text-white/70 text-sm">Personal Growth Infrastructure</p>
             </div>
           </div>

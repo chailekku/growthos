@@ -1,6 +1,6 @@
 const th = {
   common: {
-    appName: "Gekku GrowthOS",
+    appName: "KKU GrowthOS",
     tagline: "ผู้ช่วย AI ด้านการเติบโตของคุณ",
     loading: "กำลังโหลด...",
     save: "บันทึก",
@@ -48,9 +48,11 @@ const th = {
     analytics: "การวิเคราะห์",
     wellbeing: "สุขภาวะ",
     users: "จัดการผู้ใช้",
+    teachers: "จัดการอาจารย์",
     reports: "รายงาน",
     systemHealth: "สุขภาพระบบ",
     courses: "รายวิชา",
+    sections: "กลุ่มเรียน",
     departments: "ภาควิชา",
     settings: "การตั้งค่า",
   },
@@ -64,7 +66,7 @@ const th = {
     signInButton: "เข้าสู่ระบบ",
     noAccount: "ยังไม่มีบัญชีใช่ไหม?",
     createAccount: "สร้างบัญชี",
-    createAccountSubtitle: "เข้าร่วม Gekku GrowthOS วันนี้",
+    createAccountSubtitle: "เข้าร่วม KKU GrowthOS วันนี้",
     fullName: "ชื่อ-นามสกุล",
     confirmPassword: "ยืนยันรหัสผ่าน",
     studentId: "รหัสนักศึกษา",

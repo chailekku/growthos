@@ -35,7 +35,7 @@ class User extends Authenticatable
     public function isStudent(): bool      { return $this->role === 'student'; }
     public function isTeacher(): bool      { return $this->role === 'teacher'; }
     public function isPsychologist(): bool { return $this->role === 'psychologist'; }
-    public function isAdmin(): bool        { return in_array($this->role, ['super_admin', 'system_admin']); }
+    public function isAdmin(): bool        { return $this->role === 'super_admin'; }
 
     public static function determineRoleFromEmail(string $email): string
     {
