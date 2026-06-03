@@ -1,6 +1,5 @@
 <?php
 
-use Spatie\Permission\DefaultTeamResolver;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -37,12 +36,6 @@ return [
          */
         'team' => null,
 
-        /*
-         * When using the "HasModels" trait and passing raw IDs to syncModels,
-         * attachModels, or detachModels, this model class will be used to
-         * resolve those IDs. If null, defaults to the guard's model.
-         */
-        'default_model' => null,
     ],
 
     'table_names' => [
@@ -149,11 +142,6 @@ return [
      */
 
     'teams' => false,
-
-    /*
-     * The class to use to resolve the permissions team id
-     */
-    'team_resolver' => DefaultTeamResolver::class,
 
     /*
      * Passport Client Credentials Grant

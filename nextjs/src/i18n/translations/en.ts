@@ -1,6 +1,6 @@
-const en = {
+﻿const en = {
   common: {
-    appName: "Gekku GrowthOS",
+    appName: "KKU GrowthOS",
     tagline: "Your AI-Powered Growth Companion",
     loading: "Loading...",
     save: "Save",
@@ -48,9 +48,11 @@ const en = {
     analytics: "Analytics",
     wellbeing: "Wellbeing",
     users: "User Management",
+    teachers: "Teacher Management",
     reports: "Reports",
     systemHealth: "System Health",
     courses: "Courses",
+    sections: "Sections",
     departments: "Departments",
     settings: "Settings",
   },
@@ -64,7 +66,7 @@ const en = {
     signInButton: "Sign In",
     noAccount: "Don't have an account?",
     createAccount: "Create Account",
-    createAccountSubtitle: "Join Gekku GrowthOS today",
+    createAccountSubtitle: "Join KKU GrowthOS today",
     fullName: "Full Name",
     confirmPassword: "Confirm Password",
     studentId: "Student ID",

@@ -1,8 +1,8 @@
 // ============================================================
-// Core Domain Types for Gekku GrowthOS
+// Core Domain Types for KKU GrowthOS
 // ============================================================
 
-export type UserRole = "student" | "teacher" | "psychologist" | "super_admin" | "system_admin";
+export type UserRole = "student" | "teacher" | "psychologist" | "super_admin";
 
 export type Language = "th" | "en";
 
@@ -261,17 +261,33 @@ export interface Faculty {
   createdAt: Date;
 }
 
+export interface Section {
+  id: string;
+  courseId: string;
+  sectionNumber: string; // e.g. "001", "002"
+  teacherId: string;
+  enrolledStudents: string[];
+  maxCapacity: number;
+  schedule?: string; // e.g. "จันทร์-พุธ 09:00-10:30"
+  room?: string;
+  createdAt: Date;
+}
+
 export interface Course {
   id: string;
   code: string;
   name: string;
   nameEn: string;
-  teacherId: string;
+  teacherIds: string[]; // multiple teachers possible
   departmentId: string;
+  facultyId: string;
   semester: string;
   year: number;
-  enrolledStudents: string[];
+  credits: number;
+  sections: Section[];
+  enrolledStudents: string[]; // all students across sections
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // ============================================================
@@ -315,4 +331,8 @@ export interface AdminDashboardStats {
   atRiskStudents: number;
   aiInteractions: number;
   platformUptime: number;
+  totalCourses: number;
+  totalSections: number;
+  totalTeachers: number;
+  totalFaculties: number;
 }

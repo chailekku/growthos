@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Users, AlertTriangle, TrendingUp, BookOpen, Send, MessageCircle } from "lucide-react";
+import {
+  Users, AlertTriangle, TrendingUp, BookOpen, BarChart2,
+  GraduationCap, Building2, ArrowUpRight, Heart, Activity,
+} from "lucide-react";
 import Link from "next/link";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { StatCard } from "@/components/shared/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,159 +15,350 @@ import { Progress } from "@/components/ui/progress";
 import { useI18nStore } from "@/store/i18n-store";
 import { useAuthStore } from "@/store/auth-store";
 import { translations } from "@/i18n";
-import { DEMO_STUDENTS_LIST } from "@/lib/mock-data";
+import { DEMO_STUDENTS_LIST, DEMO_COURSES, DEMO_SECTIONS } from "@/lib/mock-data";
 import { getRiskColor } from "@/lib/utils";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, LineChart, Line,
 } from "recharts";
 
-const WEEKLY_ENGAGEMENT = [
-  { week: "4 สัปดาห์ที่แล้ว", engagement: 65, reflection: 58, focus: 70 },
-  { week: "3 สัปดาห์ที่แล้ว", engagement: 72, reflection: 62, focus: 68 },
-  { week: "2 สัปดาห์ที่แล้ว", engagement: 68, reflection: 70, focus: 75 },
-  { week: "สัปดาห์ที่แล้ว", engagement: 78, reflection: 75, focus: 80 },
+type ViewMode = "overview" | "by-course" | "by-section";
+
+const ENGAGEMENT_DATA = [
+  { week: "สัปดาห์ 1", sec1: 72, sec2: 68 },
+  { week: "สัปดาห์ 2", sec1: 75, sec2: 65 },
+  { week: "สัปดาห์ 3", sec1: 78, sec2: 70 },
+  { week: "สัปดาห์ 4", sec1: 80, sec2: 74 },
 ];
 
-const RISK_LABEL: Record<string, string> = {
-  low: "ปกติ", moderate: "เฝ้าระวัง", elevated: "น่ากังวล", high: "ต้องการความช่วยเหลือ",
-};
-
 export default function TeacherDashboard() {
-  const { user } = useAuthStore();
   const { language } = useI18nStore();
+  const { user } = useAuthStore();
   const t = translations[language];
+  const isTh = language === "th";
 
-  const atRiskCount = DEMO_STUDENTS_LIST.filter((s) => s.riskLevel === "high" || s.riskLevel === "elevated").length;
-  const avgEngagement = Math.round(DEMO_STUDENTS_LIST.reduce((acc, s) => acc + s.engagement, 0) / DEMO_STUDENTS_LIST.length);
+  const [viewMode,     setViewMode]     = useState<ViewMode>("overview");
+  const [selectedCourse, setSelectedCourse] = useState(DEMO_COURSES[0]?.id || "");
+
+  const myCourses  = DEMO_COURSES.filter(c => c.teacherIds.includes(user?.id || "demo-teacher-1"));
+  const allStudents = DEMO_STUDENTS_LIST;
+  const atRisk     = allStudents.filter(s => s.riskLevel === "high" || s.riskLevel === "elevated");
+  const avgEngagement = Math.round(allStudents.reduce((a, s) => a + s.engagement, 0) / allStudents.length);
+
+  const selectedCourseObj  = DEMO_COURSES.find(c => c.id === selectedCourse);
+  const selectedSections   = DEMO_SECTIONS.filter(s => s.courseId === selectedCourse);
+
+  const STAT_CARDS = [
+    { label: isTh ? "นักศึกษาทั้งหมด"       : "Total Students",    value: allStudents.length, icon: Users,         color: "text-blue-600",   bg: "bg-blue-50" },
+    { label: isTh ? "รายวิชาที่สอน"         : "Courses Taught",    value: myCourses.length || 2, icon: BookOpen,   color: "text-teal-600",   bg: "bg-teal-50" },
+    { label: isTh ? "ต้องการความช่วยเหลือ"  : "Need Support",      value: atRisk.length,   icon: AlertTriangle, color: "text-red-600",    bg: "bg-red-50" },
+    { label: isTh ? "การมีส่วนร่วมเฉลี่ย"   : "Avg. Engagement",   value: `${avgEngagement}%`, icon: Activity,  color: "text-green-600",  bg: "bg-green-50" },
+  ];
 
   return (
     <AppLayout title={t.teacher.dashboard.title}>
       <div className="space-y-6 max-w-7xl mx-auto">
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-calm-600 to-teal-700 rounded-3xl p-6 text-white">
-          <p className="text-white/70 text-sm">👋 สวัสดี,</p>
-          <h2 className="text-2xl font-bold mt-1">{user?.displayName}</h2>
-          <p className="text-white/70 text-sm mt-1">{t.teacher.dashboard.subtitle}</p>
-          <div className="flex gap-3 mt-4">
-            <div className="bg-white/20 rounded-xl px-3 py-1.5 text-sm">
-              📊 {DEMO_STUDENTS_LIST.length} {t.teacher.dashboard.totalStudents}
-            </div>
-            <div className="bg-white/20 rounded-xl px-3 py-1.5 text-sm">
-              ⚠️ {atRiskCount} {t.teacher.dashboard.atRisk}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-calm-600 to-teal-600 rounded-3xl p-6 text-white relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 opacity-10">
+            <div className="h-48 w-48 rounded-full bg-white -translate-y-16 translate-x-16" />
+          </div>
+          <div className="relative z-10">
+            <p className="text-white/70 text-sm">{t.teacher.dashboard.subtitle}</p>
+            <h2 className="text-2xl font-bold mt-1">{user?.displayName}</h2>
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {(["overview", "by-course", "by-section"] as ViewMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setViewMode(m)}
+                  className={`text-xs px-3 py-1.5 rounded-lg transition-all ${viewMode === m ? "bg-white text-calm-700 font-semibold" : "bg-white/20 text-white hover:bg-white/30"}`}
+                >
+                  {m === "overview"   ? (isTh ? "ภาพรวม"    : "Overview")
+                   : m === "by-course" ? (isTh ? "รายวิชา"  : "By Course")
+                   :                     (isTh ? "รายกลุ่ม" : "By Section")}
+                </button>
+              ))}
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Stats */}
+        {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title={t.teacher.dashboard.totalStudents} value={DEMO_STUDENTS_LIST.length} icon={Users} iconColor="text-calm-600" iconBg="bg-calm-50" delay={0} />
-          <StatCard title={t.teacher.dashboard.atRisk} value={atRiskCount} subtitle={language === "th" ? "ต้องการความช่วยเหลือ" : "Need support"} icon={AlertTriangle} iconColor="text-orange-600" iconBg="bg-orange-50" delay={0.05} />
-          <StatCard title={t.teacher.dashboard.avgEngagement} value={`${avgEngagement}%`} icon={TrendingUp} iconColor="text-green-600" iconBg="bg-green-50" trend={{ value: 8, label: "vs เมื่อสัปดาห์" }} delay={0.1} />
-          <StatCard title={t.teacher.dashboard.reflectionRate} value="68%" icon={BookOpen} iconColor="text-purple-600" iconBg="bg-purple-50" delay={0.15} />
+          {STAT_CARDS.map((c, i) => {
+            const Icon = c.icon;
+            return (
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                <Card>
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <div className={`h-10 w-10 ${c.bg} rounded-xl flex items-center justify-center`}>
+                      <Icon className={`h-5 w-5 ${c.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold text-gray-900">{c.value}</p>
+                      <p className="text-xs text-gray-500">{c.label}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Engagement Chart */}
-          <div className="lg:col-span-2">
-            <Card>
+        {/* View: Overview */}
+        {viewMode === "overview" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Engagement Chart */}
+            <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle className="text-base">{t.teacher.analytics.engagementTrend}</CardTitle>
+                <CardTitle className="text-base">{isTh ? "แนวโน้มการมีส่วนร่วมรายสัปดาห์" : "Weekly Engagement Trend"}</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={WEEKLY_ENGAGEMENT}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={ENGAGEMENT_DATA}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} unit="%" />
-                    <Tooltip contentStyle={{ borderRadius: "12px", border: "none" }} />
+                    <YAxis domain={[50, 100]} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} unit="%" />
+                    <Tooltip contentStyle={{ borderRadius: "12px", border: "none" }} formatter={(v) => [`${v}%`]} />
                     <Legend />
-                    <Bar dataKey="engagement" fill="#0d9488" name={language === "th" ? "การมีส่วนร่วม" : "Engagement"} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="reflection" fill="#6366f1" name={language === "th" ? "การสะท้อนคิด" : "Reflection"} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="focus" fill="#f97316" name={language === "th" ? "การโฟกัส" : "Focus"} radius={[4, 4, 0, 0]} />
-                  </BarChart>
+                    <Line type="monotone" dataKey="sec1" stroke="#0d9488" strokeWidth={2} dot={{ r: 4 }} name={isTh ? "กลุ่ม 001" : "Section 001"} />
+                    <Line type="monotone" dataKey="sec2" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} name={isTh ? "กลุ่ม 002" : "Section 002"} />
+                  </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          </div>
 
-          {/* At-Risk Students */}
-          <Card className="border-orange-100">
-            <CardHeader>
-              <CardTitle className="text-base text-orange-700 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                {language === "th" ? "นักศึกษาที่น่ากังวล" : "Students Needing Support"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {DEMO_STUDENTS_LIST.filter((s) => s.riskLevel !== "low").map((student) => (
-                <div key={student.id} className="flex items-center justify-between p-3 rounded-xl bg-orange-50/50">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{student.name}</p>
-                    <p className="text-xs text-gray-400">{language === "th" ? "ใช้งานล่าสุด" : "Last active"}: {student.lastActive}</p>
-                  </div>
-                  <Badge variant={student.riskLevel as "low" | "moderate" | "elevated" | "high"}>
-                    {RISK_LABEL[student.riskLevel]}
-                  </Badge>
+            {/* At-Risk Students */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    {isTh ? "ต้องการความช่วยเหลือ" : "Need Support"}
+                  </CardTitle>
+                  <Link href="/teacher/students">
+                    <Button variant="ghost" size="sm" className="text-xs">
+                      {isTh ? "ดูทั้งหมด" : "View all"}
+                    </Button>
+                  </Link>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {atRisk.slice(0, 4).map((s, i) => (
+                  <div key={s.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                      <p className="text-xs text-gray-400">{isTh ? `ใช้งานล่าสุด ${s.lastActive}` : `Last active ${s.lastActive}`}</p>
+                    </div>
+                    <Badge
+                      variant={s.riskLevel === "high" ? "destructive" : "warning"}
+                      className="text-xs"
+                    >
+                      {s.riskLevel === "high" ? (isTh ? "เสี่ยงสูง" : "High Risk") : (isTh ? "เสี่ยง" : "At Risk")}
+                    </Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* View: By Course */}
+        {viewMode === "by-course" && (
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              {DEMO_COURSES.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCourse(c.id)}
+                  className={`text-xs px-3 py-2 rounded-xl font-medium transition-all border ${
+                    selectedCourse === c.id ? "bg-calm-600 text-white border-calm-600" : "bg-white text-gray-600 border-gray-200 hover:border-calm-300"
+                  }`}
+                >
+                  {c.code} — {isTh ? c.name.substring(0, 20) : c.nameEn.substring(0, 20)}
+                </button>
               ))}
+            </div>
+
+            {selectedCourseObj && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <div>
+                      <CardTitle className="text-base">{isTh ? selectedCourseObj.name : selectedCourseObj.nameEn}</CardTitle>
+                      <p className="text-xs text-gray-400 mt-0.5">{selectedCourseObj.code} · {selectedCourseObj.credits} {isTh ? "หน่วยกิต" : "credits"} · {selectedSections.length} {isTh ? "กลุ่ม" : "sections"}</p>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {DEMO_STUDENTS_LIST.filter(s => selectedCourseObj.enrolledStudents.includes(s.sectionId)).slice(0, 5).concat(DEMO_STUDENTS_LIST.slice(0, 5)).slice(0, 5).map((s, i) => (
+                        <div key={s.id} className="flex items-center gap-4">
+                          <div className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center text-xs font-bold text-brand-700">{s.name.charAt(0)}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
+                              <span className="text-xs font-semibold text-gray-700 ml-2">{s.engagement}%</span>
+                            </div>
+                            <Progress value={s.engagement} className="h-1.5 mt-1" indicatorClassName={s.engagement > 70 ? "bg-green-400" : s.engagement > 40 ? "bg-yellow-400" : "bg-red-400"} />
+                          </div>
+                          <Badge variant={s.riskLevel === "low" ? "secondary" : s.riskLevel === "high" ? "destructive" : "warning"} className="text-xs shrink-0">
+                            {s.riskLevel}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader><CardTitle className="text-base">{isTh ? "สรุปรายวิชา" : "Course Summary"}</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { label: isTh ? "นักศึกษาทั้งหมด" : "Students",       value: selectedCourseObj.enrolledStudents.length, color: "bg-blue-400" },
+                      { label: isTh ? "กลุ่มเรียน"      : "Sections",        value: selectedSections.length,                   color: "bg-purple-400" },
+                      { label: isTh ? "มีส่วนร่วมเฉลี่ย" : "Avg Engagement", value: "74%",                                      color: "bg-green-400" },
+                      { label: isTh ? "ต้องการช่วยเหลือ" : "Need Support",   value: atRisk.length,                              color: "bg-red-400" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2 w-2 rounded-full ${item.color}`} />
+                          <span className="text-sm text-gray-600">{item.label}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">{item.value}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* View: By Section */}
+        {viewMode === "by-section" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {DEMO_SECTIONS.map((sec, i) => {
+              const course    = DEMO_COURSES.find(c => c.id === sec.courseId);
+              const secStudents = DEMO_STUDENTS_LIST.filter(s => s.sectionId === sec.id);
+              const secAvgEngagement = secStudents.length
+                ? Math.round(secStudents.reduce((a, s) => a + s.engagement, 0) / secStudents.length)
+                : 0;
+              const secAtRisk = secStudents.filter(s => s.riskLevel === "high" || s.riskLevel === "elevated");
+
+              return (
+                <motion.div key={sec.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-xs">{course?.code}</Badge>
+                            <Badge className="text-xs bg-calm-100 text-calm-700">
+                              {isTh ? `กลุ่ม ${sec.sectionNumber}` : `Sec ${sec.sectionNumber}`}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-medium text-gray-700 mt-1">{isTh ? course?.name : course?.nameEn}</p>
+                        </div>
+                        <Link href="/teacher/students">
+                          <Button variant="ghost" size="sm" className="text-xs gap-1">
+                            {isTh ? "ดูรายละเอียด" : "Details"} <ArrowUpRight className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="bg-blue-50 rounded-xl p-2">
+                          <p className="text-lg font-bold text-blue-700">{sec.enrolledStudents.length}</p>
+                          <p className="text-[10px] text-blue-600">{isTh ? "นักศึกษา" : "Students"}</p>
+                        </div>
+                        <div className="bg-green-50 rounded-xl p-2">
+                          <p className="text-lg font-bold text-green-700">{secAvgEngagement}%</p>
+                          <p className="text-[10px] text-green-600">{isTh ? "มีส่วนร่วม" : "Engagement"}</p>
+                        </div>
+                        <div className={`${secAtRisk.length > 0 ? "bg-red-50" : "bg-gray-50"} rounded-xl p-2`}>
+                          <p className={`text-lg font-bold ${secAtRisk.length > 0 ? "text-red-600" : "text-gray-500"}`}>{secAtRisk.length}</p>
+                          <p className={`text-[10px] ${secAtRisk.length > 0 ? "text-red-500" : "text-gray-400"}`}>{isTh ? "ต้องการช่วย" : "At Risk"}</p>
+                        </div>
+                      </div>
+                      {sec.schedule && (
+                        <p className="text-xs text-gray-400 text-center">{sec.schedule} · {isTh ? `ห้อง ${sec.room}` : `Room ${sec.room}`}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Recent Students (always visible in overview) */}
+        {viewMode === "overview" && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">{t.teacher.students.title}</CardTitle>
+                <Link href="/teacher/students">
+                  <Button variant="ghost" size="sm" className="text-xs gap-1">
+                    {isTh ? "ดูทั้งหมด" : "View all"} <ArrowUpRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      {[isTh ? "ชื่อ" : "Name", isTh ? "ใช้งานล่าสุด" : "Last Active", isTh ? "มีส่วนร่วม" : "Engagement", isTh ? "สะท้อนคิด" : "Reflections", isTh ? "ระดับความเสี่ยง" : "Risk"].map(h => (
+                        <th key={h} className="text-left text-xs font-semibold text-gray-400 py-2 pr-4 first:pl-0">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allStudents.slice(0, 6).map((s, i) => (
+                      <motion.tr
+                        key={s.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="border-b border-gray-50 hover:bg-gray-50"
+                      >
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-full bg-calm-100 flex items-center justify-center text-xs font-bold text-calm-700 shrink-0">{s.name.charAt(0)}</div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                              <p className="text-xs text-gray-400">{s.studentId}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 text-sm text-gray-500">{s.lastActive}</td>
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2">
+                            <Progress value={s.engagement} className="h-1.5 w-20" indicatorClassName={s.engagement > 70 ? "bg-green-400" : s.engagement > 40 ? "bg-yellow-400" : "bg-red-400"} />
+                            <span className="text-xs text-gray-600">{s.engagement}%</span>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 text-sm text-gray-600">{s.reflections}</td>
+                        <td className="py-3">
+                          <Badge variant={s.riskLevel === "low" ? "secondary" : s.riskLevel === "high" ? "destructive" : "warning"} className="text-xs">
+                            {s.riskLevel === "low" ? (isTh ? "ต่ำ" : "Low") : s.riskLevel === "high" ? (isTh ? "สูง" : "High") : s.riskLevel === "elevated" ? (isTh ? "สูงกว่าปกติ" : "Elevated") : (isTh ? "ปานกลาง" : "Moderate")}
+                          </Badge>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Student Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">{t.teacher.students.title}</CardTitle>
-              <Link href="/teacher/students">
-                <Button variant="soft" size="sm">{language === "th" ? "ดูทั้งหมด" : "View All"}</Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {DEMO_STUDENTS_LIST.map((student, i) => (
-                <motion.div
-                  key={student.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-calm-400 to-calm-600 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                    {student.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{student.name}</p>
-                    <p className="text-xs text-gray-400">{student.studentId}</p>
-                  </div>
-                  <div className="hidden md:flex items-center gap-4">
-                    <div className="w-24">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-400">engagement</span>
-                        <span className="text-xs font-medium text-gray-700">{student.engagement}%</span>
-                      </div>
-                      <Progress value={student.engagement} className="h-1.5" indicatorClassName={
-                        student.engagement > 70 ? "bg-green-500" :
-                        student.engagement > 50 ? "bg-yellow-500" : "bg-red-400"
-                      } />
-                    </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">{student.lastActive}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={student.riskLevel} className="text-xs hidden sm:flex">
-                      {RISK_LABEL[student.riskLevel]}
-                    </Badge>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
-                      <Send className="h-3 w-3" />
-                      {language === "th" ? "ส่งกำลังใจ" : "Encourage"}
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </AppLayout>
   );

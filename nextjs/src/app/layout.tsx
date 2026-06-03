@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "Gekku GrowthOS — Personal Growth Infrastructure",
+  title: "KKU GrowthOS — Personal Growth Infrastructure",
   description: "AI-powered personal growth platform for university students. Focus, reflect, grow.",
   keywords: ["student success", "AI coach", "productivity", "wellbeing", "university"],
   openGraph: {
-    title: "Gekku GrowthOS",
+    title: "KKU GrowthOS",
     description: "Your AI-powered university growth companion",
     type: "website",
   },
