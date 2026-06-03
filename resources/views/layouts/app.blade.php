@@ -17,7 +17,7 @@
             z-index: 30 !important;
             display: none;             /* hidden by default (mobile) */
             flex-direction: column;
-            overflow-y: auto;
+            overflow: hidden;
         }
         @media (min-width: 768px) {
             #app-sidebar { display: flex !important; }
@@ -82,7 +82,7 @@ function navIcon(string $name): string {
        style="background-color:#f0faf0; border-right:1px solid #d1f0d8; flex-direction:column;">
 
     {{-- Logo --}}
-    <div class="sidebar-logo flex items-center gap-3 px-5 py-5" style="border-bottom:1px solid #d1f0d8;">
+    <div class="sidebar-logo flex items-center gap-3 px-5 py-4" style="border-bottom:1px solid #d1f0d8; flex-shrink:0;">
         <div class="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style="background-color:#2D9375;">
             <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
@@ -96,7 +96,7 @@ function navIcon(string $name): string {
     </div>
 
     {{-- Navigation --}}
-    <nav class="sidebar-nav" style="padding:1rem 0.75rem;">
+    <nav class="sidebar-nav" style="flex:1; min-height:0; padding:0.5rem 0.75rem;">
 
 @php
 function navLink(string $href, string $label, string $iconName, bool $active): string {
@@ -108,7 +108,7 @@ function navLink(string $href, string $label, string $iconName, bool $active): s
     $hover = $active ? '' : 'hover:bg-white/60';
     return <<<HTML
 <a href="{$href}"
-   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {$hover}"
+   class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 {$hover}"
    style="{$style}">
     <span style="flex-shrink:0;"><svg style="height:1rem;width:1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">{$icon}</svg></span>
     <span style="flex:1;">{$label}</span>
@@ -157,7 +157,7 @@ HTML;
     </nav>
 
     {{-- User Footer --}}
-    <div class="sidebar-footer p-3" style="border-top:1px solid #d1f0d8;">
+    <div class="sidebar-footer p-2" style="border-top:1px solid #d1f0d8; flex-shrink:0;">
         <div class="flex items-center gap-3 px-2 py-2 rounded-xl mb-1">
             <div class="h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 select-none"
                  style="background-color:#2D9375;">{{ $initials }}</div>
